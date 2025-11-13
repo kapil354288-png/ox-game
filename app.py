@@ -1,6 +1,7 @@
 import streamlit as st
 from pymongo import MongoClient
 
+
 # Connect to MongoDB using Streamlit secrets
 MONGO_URI = st.secrets["mongo"]["uri"]
 client = MongoClient(MONGO_URI)
