@@ -1,5 +1,16 @@
 import streamlit as st
-from pymongo import MongoClient
+from mongoengine import connect, Document, StringField
+
+# Connect to MongoDB
+connect(
+    db="ox_game_db",
+    host=st.secrets["mongo"]["uri"]
+)
+
+# Define a simple User model
+class User(Document):
+    username = StringField(required=True, unique=True)
+    password = StringField(required=True)
 
 
 # Connect to MongoDB using Streamlit secrets
@@ -7,21 +18,21 @@ MONGO_URI = st.secrets["mongo"]["uri"]
 client = MongoClient(MONGO_URI)
 db = client["ox_game_db"]
 users = db["users"]
-
 def signup(username, password):
-    if users.find_one({"username": username}):
+    if User.objects(username=username):
         st.warning("Username already exists!")
         return
-    users.insert_one({"username": username, "password": password})
+    User(username=username, password=password).save()
     st.success("Account created! Please log in.")
 
 def login(username, password):
-    user = users.find_one({"username": username, "password": password})
+    user = User.objects(username=username, password=password).first()
     if user:
         st.session_state["user"] = username
         st.success(f"Welcome, {username}!")
     else:
         st.error("Invalid username or password.")
+
 
 def check_winner(board):
     wins = [(0,1,2),(3,4,5),(6,7,8),
