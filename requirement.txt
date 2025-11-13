@@ -1,4 +1,5 @@
 streamlit
-pymongo==4.9.1
+pymongo[srv]
+
 
 
