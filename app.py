@@ -77,26 +77,42 @@ def admin_page():
 def user_game_page():
     st.title("OX Game (Two Players)")
 
-    # If users logged in, show logout button
-    if st.session_state.get("players"):
-        if st.button("Logout Players"):
-            del st.session_state["players"]
-            del st.session_state["board"]
-            del st.session_state["turn"]
+    # ---------------- TOP BUTTONS ----------------
+    colA, colB = st.columns(2)
+
+    with colA:
+        if st.button("🏠 Home"):
+            # Return to User Game main page
+            if "players" in st.session_state:
+                del st.session_state["players"]
+            if "board" in st.session_state:
+                del st.session_state["board"]
+            if "turn" in st.session_state:
+                del st.session_state["turn"]
             st.rerun()
 
-    # If not logged in -> show login form
+    with colB:
+        if st.button("❌ Exit Game"):
+            # Completely exit the game and log out players
+            if "players" in st.session_state:
+                del st.session_state["players"]
+            if "board" in st.session_state:
+                del st.session_state["board"]
+            if "turn" in st.session_state:
+                del st.session_state["turn"]
+            st.success("Exited the game.")
+            st.rerun()
+
+    # ---------------- LOGIN SCREEN ----------------
     if not st.session_state.get("players"):
         st.subheader("Player Login")
         col1, col2 = st.columns(2)
 
         with col1:
-            p1_name = st.text_input("Player 1 Name")
             p1_username = st.text_input("Player 1 Username")
             p1_password = st.text_input("Player 1 Password", type="password")
 
         with col2:
-            p2_name = st.text_input("Player 2 Name")
             p2_username = st.text_input("Player 2 Username")
             p2_password = st.text_input("Player 2 Password", type="password")
 
@@ -106,6 +122,10 @@ def user_game_page():
 
             if not user1 or not user2:
                 st.error("Invalid login for one or both players!")
+                return
+
+            if user1["_id"] == user2["_id"]:
+                st.error("Same user cannot play both sides!")
                 return
 
             st.session_state["players"] = {
@@ -118,25 +138,22 @@ def user_game_page():
 
     # ---------------- GAME AREA ----------------
     if "players" in st.session_state:
-
         st.subheader(f"Turn: {st.session_state['turn']} ({st.session_state['players'][st.session_state['turn']]})")
 
-        # Restart game button
-        if st.button("Restart Game"):
+        if st.button("🔄 Restart Game"):
             st.session_state["board"] = [""] * 9
             st.session_state["turn"] = "X"
             st.rerun()
 
         cols = st.columns(3)
         for i in range(9):
-            if cols[i % 3].button(st.session_state["board"][i] or " ", key=f"cell_{i}"):
+            if cols[i % 3].button(st.session_state["board"][i] or " ", key=f"cell_{i}", use_container_width=True):
                 if st.session_state["board"][i] == "":
                     st.session_state["board"][i] = st.session_state["turn"]
                     winner = check_winner(st.session_state["board"])
 
                     if winner:
                         winner_name = st.session_state["players"][winner]
-
                         st.success(f"{winner_name} wins!")
 
                         tournament_collection.insert_one({
@@ -147,9 +164,18 @@ def user_game_page():
                         st.balloons()
                         return
 
+                    # If draw
+                    if "" not in st.session_state["board"]:
+                        st.warning("It's a draw!")
+                        tournament_collection.insert_one({
+                            "winner": None,
+                            "symbol": None,
+                            "result": "draw"
+                        })
+                        return
+
                     st.session_state["turn"] = "O" if st.session_state["turn"] == "X" else "X"
                     st.rerun()
-
 
 # --------------------- MAIN APP ---------------------
 def main():
